@@ -1,0 +1,7 @@
+find y save: qfinddialog -> nos permite mediante un metodo estatico que nos permite lanzar el dialogo de manejo de archivos y se puede escoger un fichero
+save: guardar en bgr (habrá que cambiarla antes de guardar) 
+asumimos que las imagenes estan en color -> transformar a rgb
+copia: si no hay ventana seleccionada copiamos toda la imagen, sino hay que centrarla y mostrar la ventana
+resize: solo si hay una ventana seleccionada, se redimensiona en los dos aspectos (x e y)
+ampliacion: igual q el anterior pero no se redimensiona
+warp+zoom: de manera continua, sobre la imagen que aparece debemos continuamente aplicar la transformacion de los parametros. Seria un cambio en el compute y no un SLOT.
