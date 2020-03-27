@@ -54,6 +54,8 @@ public slots:
     void selectWindow(QPointF p, int w, int h);
     void deselectWindow();
     void chooseImage();
+    void houghMethod(Mat canny);
+    std::vector<std::vector<float>> harrisMethod();
 
 };
 
