@@ -14,6 +14,9 @@ MainWindow::MainWindow(QWidget *parent) :
     grayImage.create(240,320,CV_8UC1);
     destColorImage.create(240,320,CV_8UC3);
     destGrayImage.create(240,320,CV_8UC1);
+    esquinas.create(240, 320, CV_8UC1);
+
+    grayImage.setTo(0);
 
     visorS = new ImgViewer(&grayImage, ui->imageFrameS);
     visorD = new ImgViewer(&destGrayImage, ui->imageFrameD);
@@ -65,6 +68,9 @@ void MainWindow::compute()
         grayImage.copyTo(destGrayImage);
     }
 
+    // Segments to 0
+    esquinas.setTo(0);
+
     // HOUGH LINES
     houghMethod(canny);
     if(ui->showLines->isChecked()){
@@ -75,15 +81,137 @@ void MainWindow::compute()
 
 
     // ESQUINAS HARRIS
-    std::vector<std::vector<float>> puntos = harrisMethod();
-    // Supresion del no máximo
+    std::vector<std::vector<float>> puntosHarris = harrisMethod();
     if(ui->showCorners->isChecked()){
-        for(int i = 0; i < puntos.size(); i++)
+        for(int i = 0; i < puntosHarris.size(); i++)
         {
-            visorD->drawSquare(QPoint(puntos[i][1],puntos[i][0]),5,5, Qt::red, true);
+            visorD->drawSquare(QPoint(puntosHarris[i][1],puntosHarris[i][0]),5,5, Qt::red, true);
         }
     }
 
+    for (int i = 0; i < puntosHarris.size(); i++) {
+        esquinas.at<uchar>(puntosHarris[i][0], puntosHarris[i][1]) = 1;
+    }
+
+    // DETECCION SEGMENTOS
+    Point e1, e2;
+    //std::cout << "Lineas encontradas: " << lines.size() << std::endl;
+    if(ui->showSegments->isChecked()){
+        for (int i = 0; i<lines.size(); i++) {
+            int nesquinas = 0;
+            int npuntos = 0;
+
+            if(abs(lines[i].end.y-lines[i].begin.y) > abs(lines[i].end.x - lines[i].begin.x)){
+                Point p1, p2;
+                if(lines[i].begin.y<lines[i].end.y)
+                {
+                    p1 = lines[i].begin;
+                    p2 = lines[i].end;
+                }
+                else
+                {
+                    p2 = lines[i].begin;
+                    p1 = lines[i].end;
+
+                }
+
+                for (int y = p1.y; y < p2.y; y++) {
+                    int x = ((y-p1.y)*(p2.x - p1.x))/(p2.y-p1.y) + p1.x;
+                    bool found = false;
+
+                    for (int xp = (x-ui->widthSegment->value()/2); xp <= (x+ui->widthSegment->value()/2); xp++) {
+                        if(xp>=0 && xp<320)
+                        {
+                            //std::cout << "AAAAAAAAAAAAAAAAAAAAAAA" << std::endl;
+                            if(esquinas.at<uchar>(y, xp) == 1){
+                                nesquinas++;
+                                if(nesquinas == 1){
+                                    e1.x = xp;
+                                    e1.y = y;
+                                    npuntos = 0;
+                                } else {
+                                    e2.x = xp;
+                                    e2.y = y;
+                                }
+                            }
+                            if (found == false and canny.at<uchar>(y, xp) == 255){
+                                npuntos++;
+                                found = true;
+                            }
+                        }
+                    }
+
+                    if(nesquinas == 2){
+                       // qDebug()<<"segmento"<<e1.x<<e1.y<<e2.x<<e2.y;
+                        if(((float)npuntos)/((float)(e2.y-e1.y)) > ui->pointRadio->value()){
+                            line aux;
+                            aux.begin = e1;
+                            aux.end = e2;
+                            listSegments.push_back(aux);
+                            visorD->drawLine(QLine(e1.x, e1.y, e2.x, e2.y), Qt::blue, 3);
+                        }
+                        e1 = e2;
+                        nesquinas = 1;
+                        npuntos = 0;
+
+                    }
+                }
+            }
+            else {
+                // x2-x1 > y2-y1
+                Point p1, p2;
+                if(lines[i].begin.x < lines[i].end.x)
+                {
+                    p1 = lines[i].begin;
+                    p2 = lines[i].end;
+                }
+                else
+                {
+                    p2 = lines[i].begin;
+                    p1 = lines[i].end;
+
+                }
+
+                for (int x = p1.x; x < p2.x; x++) {
+                    int y = ((x-p1.x)*(p2.y - p1.y))/(p2.x-p1.x) + p1.y;
+                    bool found = false;
+
+                    for (int yp = (y-ui->widthSegment->value()/2); yp <= (y+ui->widthSegment->value()/2); yp++) {
+                        if(yp >= 0 and yp < 240){
+                            if(esquinas.at<uchar>(yp, x) == 1){
+                                nesquinas++;
+                                if(nesquinas == 1){
+                                    e1.x = x;
+                                    e1.y = yp;
+                                    npuntos = 0;
+                                } else {
+                                    e2.x = x;
+                                    e2.y = yp;
+                                }
+                            }
+                            if (found == false and canny.at<uchar>(yp, x) == 255){
+                                npuntos++;
+                                found = true;
+                            }
+                        }
+                    }
+                    if(nesquinas == 2){
+                        qDebug()<<"segmento"<<e1.x<<e1.y<<e2.x<<e2.y;
+                        if(((float)npuntos)/((float)(e2.x-e1.x)) >= ui->pointRadio->value()){
+                            line aux;
+                            aux.begin = e1;
+                            aux.end = e2;
+                            listSegments.push_back(aux);
+                            visorD->drawLine(QLine(e1.x, e1.y, e2.x, e2.y), Qt::blue, 3);
+                        }
+                        e1 = e2;
+                        nesquinas = 1;
+                        npuntos = 0;
+                    }
+                }
+            } // else
+        } // for
+    } // isChecked
 
 
     //Actualización de los visores
@@ -226,7 +354,7 @@ std::vector<std::vector<float>> MainWindow::harrisMethod(){
     // Supresion del no máximo
     Mat sorted;
     std::vector<std::vector<float>> puntos;
-    std::cout << "Harris " << imgHarris.rows*imgHarris.cols << std::endl;
+    //std::cout << "Harris " << imgHarris.rows*imgHarris.cols << std::endl;
 
     for( int i = 0; i < imgHarris.rows ; i++ )
     {
@@ -264,4 +392,8 @@ std::vector<std::vector<float>> MainWindow::harrisMethod(){
         }
     }
     return puntos;
+}
+
+void MainWindow::SegmentDetection(){
+
 }

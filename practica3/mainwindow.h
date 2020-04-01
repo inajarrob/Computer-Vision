@@ -37,13 +37,14 @@ private:
     ImgViewer *visorS, *visorD;
     Mat colorImage, grayImage;
     Mat destColorImage, destGrayImage;
+    Mat esquinas;
     bool winSelected;
     Rect imageWindow;
     struct line{
         Point begin;
         Point end;
     };
-
+    std::list<line> listSegments;
     std::vector<line> lines;
 
 
@@ -56,7 +57,7 @@ public slots:
     void chooseImage();
     void houghMethod(Mat canny);
     std::vector<std::vector<float>> harrisMethod();
-
+    void SegmentDetection();
 };
 
 
