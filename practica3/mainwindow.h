@@ -13,13 +13,22 @@
 #include <math.h>
 #include <imgviewer.h>
 #include <QtWidgets/QFileDialog>
-
+#include <ui_resizeimg.h>
 
 using namespace cv;
 
 namespace Ui {
     class MainWindow;
 }
+
+class QresizeImg: public QDialog, public Ui::Dialog
+{
+    Q_OBJECT
+public:
+    QresizeImg(QDialog *parent=0) : QDialog(parent){
+        setupUi(this);
+    }
+};
 
 class MainWindow : public QMainWindow
 {
@@ -32,9 +41,10 @@ public:
 private:
     Ui::MainWindow *ui;
     QTimer timer;
+    QresizeImg resizeWindow;
 
     VideoCapture *cap;
-    ImgViewer *visorS, *visorD;
+    ImgViewer *visorS, *visorD, *visorResize;
     Mat colorImage, grayImage;
     Mat destColorImage, destGrayImage;
     Mat esquinas;
@@ -46,6 +56,8 @@ private:
     };
     std::list<line> listSegments;
     std::vector<line> lines;
+    int width, height;
+    Mat dest;
 
 
 public slots:
@@ -55,9 +67,11 @@ public slots:
     void selectWindow(QPointF p, int w, int h);
     void deselectWindow();
     void chooseImage();
-    void houghMethod(Mat canny);
+    void houghMethod(Mat canny, int width, int height);
     std::vector<std::vector<float>> harrisMethod();
-    void SegmentDetection();
+    void SegmentDetection(Mat canny, std::vector<std::vector<float>> harris);
+    bool SegmentComprobation(Point b, Point e);
+    void resizeImg();
 };
 
 

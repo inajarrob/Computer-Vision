@@ -96,13 +96,16 @@
     <string>Load Image</string>
    </property>
    <property name="checkable">
-    <bool>true</bool>
+    <bool>false</bool>
    </property>
    <property name="checked">
     <bool>false</bool>
    </property>
   </widget>
   <widget class="QPushButton" name="resizeImage">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
    <property name="geometry">
     <rect>
      <x>740</x>
@@ -115,7 +118,7 @@
     <string>Resize Image</string>
    </property>
    <property name="checkable">
-    <bool>true</bool>
+    <bool>false</bool>
    </property>
    <property name="checked">
     <bool>false</bool>
