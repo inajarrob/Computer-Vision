@@ -30,6 +30,7 @@ MainWindow::MainWindow(QWidget *parent) :
     // --------------------------------------------------------------------------------------------------
     connect(ui->loadImage,SIGNAL(clicked()),this,SLOT(chooseImage()));
     connect(ui->resizeImage, SIGNAL(clicked()), this, SLOT(resizeImg()));
+    connect(&resizeWindow, SIGNAL(signalResize()), this, SLOT(closeResize()));
     timer.start(30);
 }
 
@@ -74,11 +75,12 @@ void MainWindow::compute()
     esquinas.setTo(0);
 
     // HOUGH LINES
-    houghMethod(canny, 320, 240);
+    houghMethod(canny);
     if(ui->showLines->isChecked()){
         for (int i = 0; i < lines.size(); i++){
             visorD->drawLine(QLine(QPoint(lines[i].begin.x, lines[i].begin.y), QPoint(lines[i].end.x, lines[i].end.y)), Qt::green);
-            visorResize->drawLine(QLine(QPoint((lines[i].begin.x*width/320), (lines[i].begin.y*height/240)), QPoint((lines[i].end.x*width/320), (lines[i].end.y*height/240))), Qt::green);
+            if(ui->resizeImage->isChecked())
+                visorResize->drawLine(QLine(QPoint((lines[i].begin.x*width/320), (lines[i].begin.y*height/240)), QPoint((lines[i].end.x*width/320), (lines[i].end.y*height/240))), Qt::green);
         }
 
     }
@@ -90,7 +92,8 @@ void MainWindow::compute()
         for(int i = 0; i < puntosHarris.size(); i++)
         {
             visorD->drawSquare(QPoint(puntosHarris[i][1],puntosHarris[i][0]),5,5, Qt::red, true);
-            visorResize->drawSquare(QPoint((puntosHarris[i][1]*width/320),(puntosHarris[i][0])*height/240),5,5, Qt::red, true);
+            if(ui->resizeImage->isChecked())
+                visorResize->drawSquare(QPoint((puntosHarris[i][1]*width/320),(puntosHarris[i][0])*height/240),5,5, Qt::red, true);
         }
     }
 
@@ -102,7 +105,7 @@ void MainWindow::compute()
 
     if(ui->showSegments->isChecked()){
         listSegments.clear();
-        SegmentDetection(canny, puntosHarris);
+        SegmentDetection(canny, puntosHarris, ui->resizeImage->isChecked());
     }
 
 
@@ -113,7 +116,8 @@ void MainWindow::compute()
 
     visorS->update();
     visorD->update();
-    visorResize->update();
+    if(ui->resizeImage->isChecked())
+        visorResize->update();
 
 }
 
@@ -189,7 +193,6 @@ void MainWindow::chooseImage(){
             cv::Mat img = cv::imread(file, IMREAD_COLOR);
             width = img.size().width;
             height = img.size().height;
-            std::cout << "Width: " << width << " Height: " << height << std::endl;
             dest.create(height, width, CV_8UC1);
             cv::resize(img, img, Size(320,240));
             cvtColor(img, img, COLOR_BGR2RGB);
@@ -203,7 +206,7 @@ void MainWindow::chooseImage(){
         connect(&timer,SIGNAL(timeout()),this,SLOT(compute()));
 }
 
-void MainWindow::houghMethod(Mat canny, int width, int height){
+void MainWindow::houghMethod(Mat canny){
     std::vector<Vec2f> linesH;
     HoughLines(canny, linesH, ui->rho->value(), ui->theta->value(), ui->thresholdHough->value());
     std::vector<Point> pointXY;
@@ -294,7 +297,7 @@ std::vector<std::vector<float>> MainWindow::harrisMethod(){
     return puntos;
 }
 
-void MainWindow::SegmentDetection(Mat canny, std::vector<std::vector<float>> harris){
+void MainWindow::SegmentDetection(Mat canny, std::vector<std::vector<float>> harris, bool resize){
     Point e1, e2;
     for (int i = 0; i<lines.size(); i++) {
         int nesquinas = 0;
@@ -346,7 +349,8 @@ void MainWindow::SegmentDetection(Mat canny, std::vector<std::vector<float>> har
                         aux.end = e2;
                         listSegments.push_back(aux);
                         visorD->drawLine(QLine(e1.x, e1.y, e2.x, e2.y), Qt::blue, 3);
-                        visorResize->drawLine(QLine((e1.x*width/320), (e1.y*height/240), (e2.x*width/320), (e2.y*height/240)), Qt::blue, 3);
+                        if(resize)
+                            visorResize->drawLine(QLine((e1.x*width/320), (e1.y*height/240), (e2.x*width/320), (e2.y*height/240)), Qt::blue, 3);
                     }
                     e1 = e2;
                     nesquinas = 1;
@@ -397,7 +401,8 @@ void MainWindow::SegmentDetection(Mat canny, std::vector<std::vector<float>> har
                     if(((float)npuntos)/((float)(e2.x-e1.x)) >= ui->pointRadio->value()){
                         if(SegmentComprobation(e1, e2)){
                             visorD->drawLine(QLine(e1.x, e1.y, e2.x, e2.y), Qt::blue, 3);
-                            visorResize->drawLine(QLine((e1.x*width/320), (e1.y*height/240), (e2.x*width/320), (e2.y*height/240)), Qt::blue, 3);
+                            if(resize)
+                                visorResize->drawLine(QLine((e1.x*width/320), (e1.y*height/240), (e2.x*width/320), (e2.y*height/240)), Qt::blue, 3);
                         }
                     }
                     e1 = e2;
@@ -441,11 +446,18 @@ void MainWindow::resizeImg(){
         resizeWindow.imgResize->setGeometry(0,0,width, height);
         resizeWindow.imgResize->update();
     } else {
-        delete visorResize;
-        visorResize = new ImgViewer(640, 480, resizeWindow.imgResize);
         cv::resize(destGrayImage, dest, Size(640, 480));
         visorResize->setImage(&dest);
         visorResize->update();
     }
     resizeWindow.show();
+}
+
+void QresizeImg::closeEvent(QCloseEvent *event){
+    emit signalResize();
+}
+
+void MainWindow::closeResize(){
+    resizeWindow.close();
+    ui->resizeImage->click();
 }

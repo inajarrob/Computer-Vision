@@ -28,6 +28,9 @@ public:
     QresizeImg(QDialog *parent=0) : QDialog(parent){
         setupUi(this);
     }
+    void closeEvent(QCloseEvent *event);
+signals:
+    void signalResize();
 };
 
 class MainWindow : public QMainWindow
@@ -39,6 +42,7 @@ public:
     ~MainWindow();
 
 private:
+   // void closeEvent(QCloseEvent *bar);
     Ui::MainWindow *ui;
     QTimer timer;
     QresizeImg resizeWindow;
@@ -60,6 +64,7 @@ private:
     Mat dest;
 
 
+
 public slots:
     void compute();
     void start_stop_capture(bool start);
@@ -67,11 +72,12 @@ public slots:
     void selectWindow(QPointF p, int w, int h);
     void deselectWindow();
     void chooseImage();
-    void houghMethod(Mat canny, int width, int height);
+    void houghMethod(Mat canny);
     std::vector<std::vector<float>> harrisMethod();
-    void SegmentDetection(Mat canny, std::vector<std::vector<float>> harris);
+    void SegmentDetection(Mat canny, std::vector<std::vector<float>> harris, bool resize);
     bool SegmentComprobation(Point b, Point e);
     void resizeImg();
+    void closeResize();
 };
 
 
