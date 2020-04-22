@@ -13,7 +13,7 @@
 #include <imgviewer.h>
 #include <math.h>
 #include <QtWidgets/QFileDialog>
-#include <ui_resizeimg.h>
+#include <ui_resize.h>
 
 
 using namespace cv;
@@ -21,6 +21,18 @@ using namespace cv;
 namespace Ui {
     class MainWindow;
 }
+
+class QresizeImg: public QDialog, public Ui::Dialog
+{
+    Q_OBJECT
+public:
+    QresizeImg(QDialog *parent=0) : QDialog(parent){
+        setupUi(this);
+    }
+    void closeEvent(QCloseEvent *event);
+signals:
+    void signalResize();
+};
 
 class MainWindow : public QMainWindow
 {
@@ -33,9 +45,9 @@ public:
 private:
     Ui::MainWindow *ui;
     QTimer timer;
-
+    QresizeImg resizeWindow;
     VideoCapture *cap;
-    ImgViewer *visorS, *visorD;
+    ImgViewer *visorS, *visorD, *visorResize;
     Mat colorImage, grayImage;
     Mat destColorImage, destGrayImage;
     bool winSelected;
@@ -56,6 +68,8 @@ private:
     int puntos;
     int grisMedio;
     cv::Vec3i rgb;
+    int width, height;
+    Mat dest;
 
 public slots:
     void compute();
@@ -67,7 +81,8 @@ public slots:
     void segmentation();
     void addListRegiones(Point actual);
     void drawImage();
-
+    void closeResize();
+    void resizeImg();
 
 };
 

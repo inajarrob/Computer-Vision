@@ -19,6 +19,10 @@ MainWindow::MainWindow(QWidget *parent) :
 
     visorS = new ImgViewer(&grayImage, ui->imageFrameS);
     visorD = new ImgViewer(&destGrayImage, ui->imageFrameD);
+    if(!isColor)
+        visorResize = visorResize = new ImgViewer(&destGrayImage, resizeWindow.imgResize);
+    else
+        visorResize = visorResize = new ImgViewer(&destColorImage, resizeWindow.imgResize);
 
     connect(&timer,SIGNAL(timeout()),this,SLOT(compute()));
     connect(ui->captureButton,SIGNAL(clicked(bool)),this,SLOT(start_stop_capture(bool)));
@@ -27,6 +31,9 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(visorS,SIGNAL(pressEvent()),this,SLOT(deselectWindow()));
     // --------------------------------------------------------------------------------------------------
     connect(ui->loadButton, SIGNAL(clicked()), this, SLOT(loadImage()));
+    connect(ui->resizeButton, SIGNAL(clicked()), this, SLOT(resizeImg()));
+    connect(&resizeWindow, SIGNAL(signalResize()), this, SLOT(closeResize()));
+    connect(resizeWindow.okButton, SIGNAL(clicked()), this, SLOT(closeResize()));
     timer.start(30);
 }
 
@@ -80,14 +87,17 @@ void MainWindow::compute()
 
     visorS->update();
     visorD->update();
-
+    if(ui->resizeButton->isChecked())
+        visorResize->update();
 }
 
 void MainWindow::start_stop_capture(bool start)
 {
-    if(start)
+    if(start){
         ui->captureButton->setText("Stop capture");
-    else
+        width  = 0;
+        height = 0;
+    }else
         ui->captureButton->setText("Start capture");
 }
 
@@ -150,10 +160,10 @@ void MainWindow::loadImage(){
 
         if(!fileName.isEmpty()){
             cv::Mat img = cv::imread(file, IMREAD_COLOR);
-           /* width = img.size().width;
+            width = img.size().width;
             height = img.size().height;
             std::cout << "Width: " << width << " Height: " << height << std::endl;
-            dest.create(height, width, CV_8UC1);*/
+            dest.create(height, width, CV_8UC1);
             cv::resize(img, img, Size(320,240));
             cvtColor(img, img, COLOR_BGR2RGB);
             img.copyTo(colorImage);
@@ -360,6 +370,44 @@ void MainWindow::drawImage(){
         //std::cout << "Frontiers size:" <<  listRegiones.at(i).frontera.size() << std::endl;
         for (int j=0; j < listRegiones.at(i).frontera.size(); j++) {
             visorD->drawSquare(QPointF(listRegiones.at(i).frontera.at(j).x, listRegiones.at(i).frontera.at(j).y), 1, 1, Qt::blue);
+            if(ui->resizeButton->isChecked())
+                visorResize->drawSquare(QPointF((listRegiones.at(i).frontera.at(j).x*width/320), (listRegiones.at(i).frontera.at(j).y*height/240)), 3, 3, Qt::blue);
         }
     }
+}
+
+void MainWindow::resizeImg(){
+    if (width != 0 and height != 0) {
+        resizeWindow.setGeometry(0,0,width*1.25, height*1.25);
+        resizeWindow.update();
+        // ----------------------------------------
+        delete visorResize;
+        visorResize = new ImgViewer(width, height, resizeWindow.imgResize);
+        if(!isColor)
+            cv::resize(destGrayImage, dest, Size(width, height));
+        else
+            cv::resize(destColorImage, dest, Size(width, height));
+        visorResize->setImage(&dest);
+        visorResize->update();
+        // -----------------------------------------
+        resizeWindow.imgResize->setGeometry(0,0,width, height);
+        resizeWindow.imgResize->update();
+        // ------- button --------------------------
+        resizeWindow.okButton->setGeometry(width*1.25/2, height*1.20, 89, 25);
+        resizeWindow.okButton->update();
+    } else {
+        cv::resize(destGrayImage, dest, Size(640, 480));
+        visorResize->setImage(&dest);
+        visorResize->update();
+    }
+    resizeWindow.show();
+}
+
+void QresizeImg::closeEvent(QCloseEvent *event){
+    emit signalResize();
+}
+
+void MainWindow::closeResize(){
+    resizeWindow.close();
+    ui->resizeButton->setChecked(false);
 }
