@@ -9,14 +9,18 @@
 #include <opencv2/video/video.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
+#include <opencv2/dnn.hpp>
 
 #include <imgviewer.h>
 #include <math.h>
 #include <QtWidgets/QFileDialog>
 #include <ui_resize.h>
+#include <fstream>
+#include <QTextStream>
 
 
 using namespace cv;
+using namespace dnn;
 
 namespace Ui {
     class MainWindow;
@@ -83,6 +87,7 @@ public slots:
     void drawImage();
     void closeResize();
     void resizeImg();
+    void semanticSegmentation();
 
 };
 

@@ -251,7 +251,7 @@
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Category color percentage&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </widget>
-  <widget class="QComboBox" name="optionCombo">
+  <widget class="QComboBox" name="semanticOption">
    <property name="geometry">
     <rect>
      <x>470</x>
@@ -263,6 +263,11 @@
    <item>
     <property name="text">
      <string>ENet</string>
+    </property>
+   </item>
+   <item>
+    <property name="text">
+     <string>FCN</string>
     </property>
    </item>
   </widget>

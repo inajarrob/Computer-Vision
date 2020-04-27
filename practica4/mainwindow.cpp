@@ -1,6 +1,6 @@
 ﻿#include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include "QDebug"
+#include <QDebug>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -75,6 +75,8 @@ void MainWindow::compute()
 
     if(ui->bottomup->isChecked())
         segmentation();
+    if(ui->semantic->isChecked())
+        semanticSegmentation();
 
     if(ui->Drawlimits->isChecked()){
         drawImage();
@@ -410,4 +412,83 @@ void QresizeImg::closeEvent(QCloseEvent *event){
 void MainWindow::closeResize(){
     resizeWindow.close();
     ui->resizeButton->setChecked(false);
+}
+
+void MainWindow::semanticSegmentation(){
+    Mat data;
+    Mat aux;
+    cv::dnn::Net net;
+    float best = 0;
+    aux.create(512,1024, CV_8UC3);
+    if(ui->semanticOption->currentIndex() == 0){
+        // ENet
+        QFile is("/home/isabel/Escritorio/VA/practica4/enet/enet-colors.txt");
+        is.open(QIODevice::ReadOnly);
+        QTextStream in(&is);
+        std::vector<cv::Vec3b> enet;
+        int k=0;
+        while(!in.atEnd()){
+            QString line = in.readLine(k);
+            QStringList fields = line.split(",");
+            cv::Vec3b rgbENET;
+            for(int k=0; k<fields.size(); k++){
+                rgbENET[k] = fields.at(k).toUInt();
+            }
+            enet.push_back(rgbENET);
+        }
+        net = cv::dnn::readNetFromTorch("../practica4/enet/enet-model.net", true, true);
+        data = blobFromImage(colorImage, 1/255., Size(1024, 512));
+        net.setInput(data);
+        Mat output = net.forward();
+        int j;
+        int value;
+
+        // por cada pixel lo que tenemos que hacer es acceder al valor que nos ha devuelto la red
+        // para cada una de las categorias, ver en qué categorias su valor es máximo
+        for (int i = 0; i < 512; i++) {
+            for (j = 0; j < 1024; j++) {
+                int idx[4] = {0, 0, i, j};
+                value = 0;
+                // probabilidad de que el píxel (f,c) pertenezca a la categoria cat
+                best = output.at<float>(idx);
+                for(int b = 1 ; b < 20; b++){
+                    int idx[4] = {0, b, i, j};
+                    float val = output.at<float>(idx);
+                        if(val > best){
+                            best = val;
+                            value = b;
+                        }
+                }
+                std::cout << "BEST: " << value << std::endl;
+
+                aux.at<Vec3b>(i,j)[0] = enet.at(value)[0];
+                aux.at<Vec3b>(i,j)[1] = enet.at(value)[1];
+                aux.at<Vec3b>(i,j)[2] = enet.at(value)[2];
+            }
+        }
+        cv::resize(aux, destColorImage, Size(320,240));
+    } else {
+        // FCN
+       /* cv::dnn::readNetFromTorch("ENet/enet-model.net", true, true);
+        cv::dnn::blobFromImage(grayImage, data, 1.0, Size(1024,512));
+        net.setInput(data);
+        Mat output = net.forward();
+        int j;
+        // por cada pixel lo que tenemos que hacer es acceder al valor que nos ha devuelto la red
+        // para cada una de las categorias, ver en qué categorias su valor es máximo
+        for (int i = 0; i < grayImage.rows; i++) {
+            for (j = 0; j < grayImage.cols; j++) {
+                int idx[4] = {0, 0, i, j};
+                // probabilidad de que el píxel (f,c) pertenezca a la categoria cat
+                best = output.at<float>(idx);
+                for(int b = 1 ; b < 21; b++){
+                    int idx[4] = {0, b, i, j};
+                    float val = output.at<float>(idx);
+                        if(val > best)
+                            best = val;
+                }
+            }
+            destGrayImage.at<uchar>(i,j) = best;
+        }*/
+    }
 }
