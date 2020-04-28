@@ -459,7 +459,6 @@ void MainWindow::semanticSegmentation(){
                             value = b;
                         }
                 }
-                std::cout << "BEST: " << value << std::endl;
 
                 aux.at<Vec3b>(i,j)[0] = enet.at(value)[0];
                 aux.at<Vec3b>(i,j)[1] = enet.at(value)[1];
@@ -467,28 +466,67 @@ void MainWindow::semanticSegmentation(){
             }
         }
         cv::resize(aux, destColorImage, Size(320,240));
+        // destColorImage = X*destColorImage + (1-X)*colorImage
+        float percentage = (ui->colorPercentage->value()/100.);
+        for (int i =0; i < destColorImage.rows; i++) {
+            for (int j=0; j < destColorImage.cols; j++) {
+                destColorImage.at<Vec3b>(i,j) = (percentage*destColorImage.at<Vec3b>(i,j)) + ((1 - percentage)*colorImage.at<Vec3b>(i,j));
+            }
+        }
     } else {
         // FCN
-       /* cv::dnn::readNetFromTorch("ENet/enet-model.net", true, true);
-        cv::dnn::blobFromImage(grayImage, data, 1.0, Size(1024,512));
+        QFile is("/home/isabel/Escritorio/VA/practica4/fcn/fcn-colors.txt");
+        is.open(QIODevice::ReadOnly);
+        QTextStream in(&is);
+        std::vector<cv::Vec3b> fcn;
+        int k=0;
+        while(!in.atEnd()){
+            QString line = in.readLine(k);
+            QStringList fields = line.split(",");
+            cv::Vec3b rgbFCN;
+            for(int k=0; k<fields.size(); k++){
+                rgbFCN[k] = fields.at(k).toUInt();
+            }
+            fcn.push_back(rgbFCN);
+        }
+
+        net = cv::dnn::readNetFromCaffe("../practica4/fcn/fcn.prototxt", "../practica4/fcn/fcn.caffemodel");
+        Mat aux2;
+        cvtColor(colorImage, aux2, COLOR_RGB2BGR);
+        blobFromImage(aux2, data, 1.0, Size(500,500));
         net.setInput(data);
         Mat output = net.forward();
         int j;
-        // por cada pixel lo que tenemos que hacer es acceder al valor que nos ha devuelto la red
-        // para cada una de las categorias, ver en qué categorias su valor es máximo
-        for (int i = 0; i < grayImage.rows; i++) {
-            for (j = 0; j < grayImage.cols; j++) {
+        int value;
+        aux.create(500,500, CV_8UC3);
+
+        for (int i = 0; i < 500; i++) {
+            for (j = 0; j < 500; j++) {
                 int idx[4] = {0, 0, i, j};
+                value = 0;
                 // probabilidad de que el píxel (f,c) pertenezca a la categoria cat
                 best = output.at<float>(idx);
                 for(int b = 1 ; b < 21; b++){
                     int idx[4] = {0, b, i, j};
                     float val = output.at<float>(idx);
-                        if(val > best)
+                        if(val > best){
                             best = val;
+                            value = b;
+                        }
                 }
+
+                aux.at<Vec3b>(i,j)[0] = fcn.at(value)[2];
+                aux.at<Vec3b>(i,j)[1] = fcn.at(value)[1];
+                aux.at<Vec3b>(i,j)[2] = fcn.at(value)[0];
             }
-            destGrayImage.at<uchar>(i,j) = best;
-        }*/
+        }
+        cvtColor(aux, aux, COLOR_BGR2RGB);
+        cv::resize(aux, destColorImage, Size(320,240));
+        float percentage = (ui->colorPercentage->value()/100.);
+        for (int i =0; i < destColorImage.rows; i++) {
+            for (int j=0; j < destColorImage.cols; j++) {
+                destColorImage.at<Vec3b>(i,j) = (percentage*destColorImage.at<Vec3b>(i,j)) + ((1 - percentage)*colorImage.at<Vec3b>(i,j));
+            }
+        }
     }
 }
